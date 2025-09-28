@@ -46,50 +46,29 @@ exports.logout = exports.getCurrentUser = exports.restoreSession = exports.creat
 const AuthService = __importStar(require("../../services/auth.service"));
 const ApiResponse = __importStar(require("../../utils/apiResponse"));
 const User_model_1 = require("../models/User.model");
-/**
- * Creates a new anonymous user session.
- */
 const createAnonymousSession = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { secretPhrase } = req.body;
         const user = yield AuthService.createAnonymousUser(secretPhrase);
-        // Set the user ID in the session
-        //@ts-ignore
-        req.session.userId = user._id.toString();
-        // Return only the public-facing data
-        const publicUserData = {
-            _id: user._id,
-            publicName: user.publicName,
-            publicAvatar: user.publicAvatar,
-        };
-        return ApiResponse.success(res, 201, 'Anonymous session created successfully.', publicUserData);
+        // @ts-ignore
+        req.session.userId = user._id;
+        return ApiResponse.success(res, 201, 'Anonymous identity created.', user);
     }
     catch (error) {
         next(error);
     }
 });
 exports.createAnonymousSession = createAnonymousSession;
-/**
- * Restores a user session using a public name and secret phrase.
- */
 const restoreSession = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { publicName, secretPhrase } = req.body;
-        if (!publicName || !secretPhrase) {
-            return ApiResponse.error(res, 400, 'Public name and secret phrase are required.');
-        }
         const user = yield AuthService.restoreUserBySecretPhrase(publicName, secretPhrase);
-        if (!user) {
-            return ApiResponse.error(res, 401, 'Invalid public name or secret phrase.');
+        if (user) {
+            // @ts-ignore
+            req.session.userId = user._id;
+            return ApiResponse.success(res, 200, 'Session restored.', user);
         }
-        //@ts-ignore
-        req.session.userId = user._id.toString();
-        const publicUserData = {
-            _id: user._id,
-            publicName: user.publicName,
-            publicAvatar: user.publicAvatar,
-        };
-        return ApiResponse.success(res, 200, 'Session restored successfully.', publicUserData);
+        return ApiResponse.error(res, 401, 'Invalid credentials.');
     }
     catch (error) {
         next(error);
@@ -97,20 +76,22 @@ const restoreSession = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.restoreSession = restoreSession;
 /**
- * Gets the current authenticated user's data.
+ * Gets the current user's data if a valid session exists.
+ * This is the function that handles the GET /api/auth/me request.
  */
 const getCurrentUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        if (!req.session.userId) {
-            return ApiResponse.error(res, 401, 'Not authenticated.');
+        // @ts-ignore
+        if (!((_a = req.session) === null || _a === void 0 ? void 0 : _a.userId)) {
+            return ApiResponse.error(res, 401, 'No active session.');
         }
-        const user = yield User_model_1.User.findById(req.session.userId).select('publicName publicAvatar hiddenName hiddenAvatar');
+        // @ts-ignore
+        const user = yield User_model_1.User.findById(req.session.userId).lean();
         if (!user) {
-            // This can happen if the user was deleted but the session persists
-            req.session.destroy(() => { });
             return ApiResponse.error(res, 401, 'User not found.');
         }
-        return ApiResponse.success(res, 200, 'Current user data fetched.', user);
+        return ApiResponse.success(res, 200, 'Session is active.', user);
     }
     catch (error) {
         next(error);
@@ -121,12 +102,13 @@ exports.getCurrentUser = getCurrentUser;
  * Logs the user out by destroying the session.
  */
 const logout = (req, res, next) => {
+    // @ts-ignore
     req.session.destroy((err) => {
         if (err) {
             return next(err);
         }
         res.clearCookie('connect.sid'); // The default session cookie name
-        return ApiResponse.success(res, 200, 'Logout successful.');
+        return ApiResponse.success(res, 200, 'Successfully logged out.');
     });
 };
 exports.logout = logout;

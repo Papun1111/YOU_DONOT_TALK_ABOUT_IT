@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
- * @fileoverview Main router that aggregates all other route modules.
+ * @fileoverview The main router that aggregates all other route modules.
  */
 const express_1 = require("express");
 const auth_routes_1 = __importDefault(require("./auth.routes"));
@@ -13,7 +13,7 @@ const challenge_routes_1 = __importDefault(require("./challenge.routes"));
 const post_routes_1 = __importDefault(require("./post.routes"));
 const leaderboard_routes_1 = __importDefault(require("./leaderboard.routes"));
 const router = (0, express_1.Router)();
-// Mount all resource-specific routers
+// Mount the different resource routes under their respective paths.
 router.use('/auth', auth_routes_1.default);
 router.use('/rooms', room_routes_1.default);
 router.use('/challenges', challenge_routes_1.default);

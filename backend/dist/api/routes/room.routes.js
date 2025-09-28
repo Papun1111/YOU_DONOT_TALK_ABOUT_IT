@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
- * @fileoverview Routes for accessing rooms and their associated challenges.
+ * @fileoverview Routes for accessing and creating rooms.
  */
 const express_1 = require("express");
 const RoomController = __importStar(require("../controllers/room.controller"));
@@ -43,6 +43,9 @@ const router = (0, express_1.Router)();
 // Route to get a list of all available rooms
 // GET /api/rooms
 router.get('/', rateLimiter_1.generalLimiter, RoomController.getAllRooms);
+// Route to create a new room
+// POST /api/rooms
+router.post('/', rateLimiter_1.strictLimiter, RoomController.createRoom);
 // Route to get all active challenges within a specific room
 // GET /api/rooms/:roomId/challenges
 router.get('/:roomId/challenges', rateLimiter_1.generalLimiter, RoomController.getRoomChallenges);

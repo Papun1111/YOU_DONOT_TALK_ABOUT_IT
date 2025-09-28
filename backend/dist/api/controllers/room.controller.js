@@ -42,16 +42,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRoomChallenges = exports.getAllRooms = void 0;
+exports.getRoomChallenges = exports.createRoom = exports.getAllRooms = void 0;
 const Room_model_1 = require("../models/Room.model");
 const Challenge_model_1 = require("../models/Challenge.model");
 const ApiResponse = __importStar(require("../../utils/apiResponse"));
-/**
- * Fetches all available rooms.
- */
+// ... getAllRooms and createRoom functions remain the same ...
 const getAllRooms = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const rooms = yield Room_model_1.Room.find().sort({ createdAt: 1 });
+        const rooms = yield Room_model_1.Room.find().sort({ createdAt: -1 });
         return ApiResponse.success(res, 200, 'Rooms retrieved successfully.', rooms);
     }
     catch (error) {
@@ -59,16 +57,45 @@ const getAllRooms = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getAllRooms = getAllRooms;
+const createRoom = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { name, description, key } = req.body;
+        if (!name || !description || !key) {
+            return ApiResponse.error(res, 400, 'Name, description, and key are required.');
+        }
+        const existingRoom = yield Room_model_1.Room.findOne({ key });
+        if (existingRoom) {
+            return ApiResponse.error(res, 409, 'A room with this key already exists.');
+        }
+        const newRoom = new Room_model_1.Room({
+            name,
+            description,
+            key,
+            rules: ['Be respectful.', 'Content must adhere to safety guidelines.'],
+            weights: { puzzle: 1.0, dare: 1.0, upvote: 1.0 },
+        });
+        yield newRoom.save();
+        return ApiResponse.success(res, 201, 'Room created successfully.', newRoom);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.createRoom = createRoom;
 /**
- * Fetches the active challenges for a specific room.
+ * Fetches all active challenges for a specific room using its friendly key.
  */
 const getRoomChallenges = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { roomId } = req.params;
-        const challenges = yield Challenge_model_1.Challenge.find({ roomId, active: true })
-            .select('-correctIndex') // Never send the correct answer to the client
-            .sort({ difficulty: 1 });
-        return ApiResponse.success(res, 200, 'Active challenges for the room retrieved successfully.', challenges);
+        const { roomKey } = req.params;
+        // Step 1: Find the room document using the human-readable key (e.g., "project-mayhem").
+        const room = yield Room_model_1.Room.findOne({ key: roomKey });
+        if (!room) {
+            return ApiResponse.error(res, 404, 'Room not found.');
+        }
+        // Step 2: Use the valid database ObjectId from the found room to query for challenges.
+        const challenges = yield Challenge_model_1.Challenge.find({ roomId: room._id, active: true }).lean();
+        return ApiResponse.success(res, 200, 'Challenges retrieved successfully.', challenges);
     }
     catch (error) {
         next(error);

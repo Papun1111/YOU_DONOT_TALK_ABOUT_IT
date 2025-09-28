@@ -89,3 +89,48 @@ export const generateAvatar = (seed: string): string => {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 };
 
+/**
+ * @fileoverview Utility functions and data for content moderation.
+ * This file centralizes the word lists and sanitization logic.
+ */
+
+/**
+ * A list of keywords that should be hard-blocked immediately.
+ * In a production app, this list would be much more extensive, managed securely,
+ * and potentially loaded from a database or configuration service.
+ * This is a small, safe-for-work example to demonstrate the concept.
+ */
+export const BANNED_KEYWORDS: string[] = [
+    'self-harm instruction', // Example category for dangerous acts
+    'howto make bomb',       // Example category for illegal acts
+    'i want to kill',        // Example category for threats
+];
+
+/**
+ * A dictionary of profane words and their masked versions for sanitization.
+ */
+const PROFANITY_MAP: { [key: string]: string } = {
+    'fuck': 'f**k',
+    'shit': 's**t',
+    'bitch': 'b***h',
+    'asshole': 'a*****e',
+    // This list can be expanded as needed.
+};
+
+/**
+ * Masks profanity in a given text string based on the PROFANITY_MAP.
+ * It uses a regular expression to find and replace whole words, case-insensitively.
+ * @param {string} text - The input text to sanitize.
+ * @returns {string} The text with profanity masked.
+ */
+export const maskProfanity = (text: string): string => {
+    // Create a regex from the keys of the profanity map.
+    // The '\b' ensures we match whole words only (e.g., 'ass' in 'class' won't be matched).
+    // The 'gi' flags make it global (replace all occurrences) and case-insensitive.
+    const regex = new RegExp(`\\b(${Object.keys(PROFANITY_MAP).join('|')})\\b`, 'gi');
+    
+    // The replace function finds a match, converts it to lowercase to find the
+    // correct key in our map, and replaces it with the masked version.
+    return text.replace(regex, match => PROFANITY_MAP[match.toLowerCase()] || match);
+};
+

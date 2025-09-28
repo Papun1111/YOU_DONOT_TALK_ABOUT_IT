@@ -41,92 +41,74 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reactToPost = exports.getFeed = exports.createPost = void 0;
+exports.reactToPost = exports.createPost = exports.getFeed = void 0;
 const Post_model_1 = require("../models/Post.model");
-const Reaction_model_1 = require("../models/Reaction.model");
-const ModerationService = __importStar(require("../../services/moderation.service"));
-const ApiResponse = __importStar(require("../../utils/apiResponse"));
 const socket_1 = require("../../socket");
+const ApiResponse = __importStar(require("../../utils/apiResponse"));
 /**
- * Creates a new post in a room's feed.
- */
-const createPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const userId = req.session.userId;
-        if (!userId) {
-            return ApiResponse.error(res, 401, 'You must be logged in to post.');
-        }
-        const { body, roomId, hiddenSelfShown } = req.body;
-        if (!body || !roomId) {
-            return ApiResponse.error(res, 400, 'Post body and room ID are required.');
-        }
-        const post = yield Post_model_1.Post.create({
-            userId,
-            roomId,
-            body,
-            hiddenSelfShown: hiddenSelfShown || false,
-        });
-        // Populate user data for the broadcast
-        yield post.populate('userId', 'publicName publicAvatar');
-        // Broadcast the new post to all connected clients in the feed
-        (0, socket_1.getIO)().of('/feed').emit('feed:new_post', post);
-        return ApiResponse.success(res, 201, 'Post created successfully.', post);
-    }
-    catch (error) {
-        next(error);
-    }
-});
-exports.createPost = createPost;
-/**
- * Get posts for the feed with cursor-based pagination.
+ * Fetches the latest posts for the feed.
  */
 const getFeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { cursor, limit = 20 } = req.query;
-        const query = Post_model_1.Post.find(cursor ? { _id: { $lt: cursor } } : {})
-            .populate('userId', 'publicName publicAvatar')
+        const { room } = req.query;
+        const query = room ? { roomId: room } : {};
+        const posts = yield Post_model_1.Post.find(query)
             .sort({ createdAt: -1 })
-            .limit(Number(limit));
-        const posts = yield query.exec();
-        const nextCursor = posts.length === Number(limit) ? posts[posts.length - 1]._id : null;
-        return ApiResponse.success(res, 200, 'Feed retrieved successfully.', { posts, nextCursor });
+            .limit(50)
+            .populate('userId', 'publicName publicAvatar') // This gets the user data
+            .lean();
+        // FIX: The database returns the populated user data in the 'userId' field.
+        // We must rename it to 'user' to match what the frontend's AnonPost component expects.
+        const postsWithUserField = posts.map(post => {
+            const { userId } = post, rest = __rest(post, ["userId"]);
+            // @ts-ignore
+            return Object.assign(Object.assign({}, rest), { user: userId });
+        });
+        return ApiResponse.success(res, 200, 'Feed retrieved successfully.', postsWithUserField);
     }
     catch (error) {
         next(error);
     }
 });
 exports.getFeed = getFeed;
-/**
- * Adds a reaction to a post (upvote or flag).
- */
-const reactToPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const createPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { postId } = req.params;
+        // @ts-ignore
         const userId = req.session.userId;
-        const { type } = req.body; // 'upvote' or 'flag'
-        if (!userId) {
-            return ApiResponse.error(res, 401, 'You must be logged in to react.');
+        const { body, roomId } = req.body;
+        if (!body || !roomId) {
+            return ApiResponse.error(res, 400, 'Post body and roomId are required.');
         }
-        if (type === 'flag') {
-            yield ModerationService.flagContentForReview('post', postId, 'user_report');
-            return ApiResponse.success(res, 200, 'Post has been flagged for review.');
-        }
-        if (type === 'upvote') {
-            // Prevent duplicate upvotes
-            const existingReaction = yield Reaction_model_1.Reaction.findOne({ postId, userId, type: 'upvote' });
-            if (existingReaction) {
-                return ApiResponse.error(res, 409, 'You have already upvoted this post.');
-            }
-            const reaction = yield Reaction_model_1.Reaction.create({ postId, userId, type: 'upvote' });
-            // Broadcast the reaction update
-            (0, socket_1.getIO)().of('/feed').emit('post:reaction', { postId, type: 'upvote' });
-            return ApiResponse.success(res, 201, 'Post upvoted.', reaction);
-        }
-        return ApiResponse.error(res, 400, 'Invalid reaction type.');
+        let newPost = new Post_model_1.Post({ userId, body, roomId });
+        yield newPost.save();
+        newPost = yield newPost.populate('userId', 'publicName publicAvatar');
+        const postResponse = newPost.toObject();
+        // @ts-ignore
+        postResponse.user = postResponse.userId;
+        // @ts-ignore
+        delete postResponse.userId;
+        (0, socket_1.getIO)().of('/feed').emit('feed:new_post', postResponse);
+        return ApiResponse.success(res, 201, 'Post created successfully.', postResponse);
     }
     catch (error) {
         next(error);
     }
+});
+exports.createPost = createPost;
+const reactToPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    // Dummy function for now
+    return ApiResponse.success(res, 200, 'Reacted successfully.');
 });
 exports.reactToPost = reactToPost;

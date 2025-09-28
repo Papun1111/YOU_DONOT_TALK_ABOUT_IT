@@ -1,18 +1,21 @@
-/**
- * @fileoverview Routes for user authentication and session management.
- */
 import { Router } from 'express';
 import * as AuthController from '../controllers/auth.controller';
-import { generalLimiter } from '../middleware/rateLimiter';
+import { strictLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
+// FIX: This new route connects the /me URL to your getCurrentUser function.
+// This is the change that will resolve the 404 error.
+router.get('/me', AuthController.getCurrentUser);
+
 // Route to create a new anonymous session
-// POST /api/auth/anonymous
-router.post('/anonymous', generalLimiter, AuthController.createAnonymousSession);
+router.post('/anonymous', strictLimiter, AuthController.createAnonymousSession);
 
 // Route to restore a session using a secret phrase
-// POST /api/auth/restore
-router.post('/restore', generalLimiter, AuthController.restoreSession);
+router.post('/restore', strictLimiter, AuthController.restoreSession);
+
+// Route to log out and destroy the session
+router.post('/logout', AuthController.logout);
 
 export default router;
+

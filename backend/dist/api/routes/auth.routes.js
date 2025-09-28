@@ -33,17 +33,17 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * @fileoverview Routes for user authentication and session management.
- */
 const express_1 = require("express");
 const AuthController = __importStar(require("../controllers/auth.controller"));
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
+// FIX: This new route connects the /me URL to your getCurrentUser function.
+// This is the change that will resolve the 404 error.
+router.get('/me', AuthController.getCurrentUser);
 // Route to create a new anonymous session
-// POST /api/auth/anonymous
-router.post('/anonymous', rateLimiter_1.generalLimiter, AuthController.createAnonymousSession);
+router.post('/anonymous', rateLimiter_1.strictLimiter, AuthController.createAnonymousSession);
 // Route to restore a session using a secret phrase
-// POST /api/auth/restore
-router.post('/restore', rateLimiter_1.generalLimiter, AuthController.restoreSession);
+router.post('/restore', rateLimiter_1.strictLimiter, AuthController.restoreSession);
+// Route to log out and destroy the session
+router.post('/logout', AuthController.logout);
 exports.default = router;

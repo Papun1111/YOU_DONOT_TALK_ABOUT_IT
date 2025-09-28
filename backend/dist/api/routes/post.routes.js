@@ -38,14 +38,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 const express_1 = require("express");
 const PostController = __importStar(require("../controllers/post.controller"));
-// Assuming specific limiters for these actions will be created.
-// If not, 'strictLimiter' can be used as a fallback.
 const rateLimiter_1 = require("../middleware/rateLimiter");
-// import { moderationMiddleware } from '../middleware/moderation';
+const moderation_1 = require("../middleware/moderation");
 const router = (0, express_1.Router)();
 /**
  * @route   GET /api/posts
- * @desc    Get the main feed of posts (supports cursor-based pagination)
+ * @desc    Get the main feed of posts
  * @access  Public
  */
 router.get('/', rateLimiter_1.generalLimiter, PostController.getFeed);
@@ -54,14 +52,12 @@ router.get('/', rateLimiter_1.generalLimiter, PostController.getFeed);
  * @desc    Create a new post
  * @access  Private (implicitly, requires a session)
  */
-router.post('/', rateLimiter_1.strictLimiter, // Using a strict limiter for content creation
-// moderationMiddleware, // IMPORTANT: Enable this once the middleware is complete
+router.post('/', rateLimiter_1.strictLimiter, moderation_1.moderationMiddleware, // IMPORTANT: This safety check is now active.
 PostController.createPost);
 /**
  * @route   POST /api/posts/:postId/react
  * @desc    React to a post (e.g., upvote, flag)
  * @access  Private (implicitly, requires a session)
  */
-router.post('/:postId/react', rateLimiter_1.strictLimiter, // Reactions should also be rate-limited
-PostController.reactToPost);
+router.post('/:postId/react', rateLimiter_1.strictLimiter, PostController.reactToPost);
 exports.default = router;
