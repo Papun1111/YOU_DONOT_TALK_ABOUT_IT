@@ -2,46 +2,52 @@ import { createContext, useState, useEffect, useContext, type ReactNode } from '
 import { type User } from '../types';
 import * as api from '../api/auth';
 
+/**
+ * This interface defines the shape of the authentication context's value.
+ * It's what components will receive when they use the `useAuth` hook.
+ */
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  isLoading: boolean; // Indicates if the initial session check is running
   login: (secretPhrase?: string) => Promise<User | null>;
-  restoreSession: (publicName: string, secretPhrase: string) => Promise<User | null>;
   logout: () => Promise<void>;
-  checkSession: () => Promise<void>; // Add this for manual session checking
+  restoreSession: (publicName: string, secretPhrase: string) => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * This component provides the authentication state and functions to the entire app.
+ * It handles the logic for session checking, login, logout, and restore.
+ */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Start as false, not true
+  // Start in a loading state. This is crucial to prevent the app from rendering
+  // before we know if the user is logged in or not.
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Only check session if we have reason to believe there might be one
-  const checkSession = async () => {
-    setIsLoading(true);
-    try {
-      const currentUser = await api.checkSession();
-      setUser(currentUser);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // Don't log error for expected 401s on landing page
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Check for existing session only on app load
+  // This useEffect is the key to keeping the user logged in across reloads.
+  // It runs only ONCE when the app first loads.
   useEffect(() => {
-    // Only check session if we're likely to have one
-    // You could also check for the presence of a session cookie here
-    const hasSessionCookie = document.cookie.includes('connect.sid');
-    
-    if (hasSessionCookie) {
-      checkSession();
-    }
-  }, []);
+    const checkUserSession = async () => {
+      try {
+        // We make an API call to the backend to check for a valid session cookie.
+        const currentUser = await api.checkSession();
+        setUser(currentUser); // If the call succeeds, the user is logged in.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
+        // A 401 error here is expected if the user is not logged in.
+        // It's not a bug, so we just ensure the user state is null.
+        console.log("No active session found.");
+        setUser(null);
+      } finally {
+        // No matter the outcome, the initial check is complete.
+        setIsLoading(false);
+      }
+    };
+
+    checkUserSession();
+  }, []); // The empty dependency array [] ensures this runs only once.
 
   const login = async (secretPhrase?: string): Promise<User | null> => {
     setIsLoading(true);
@@ -52,12 +58,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Login failed:", error);
       setUser(null);
-      return null;
+      throw error; // Re-throw error for the UI component to handle
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   const restoreSession = async (publicName: string, secretPhrase: string): Promise<User | null> => {
     setIsLoading(true);
     try {
@@ -67,38 +73,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Session restore failed:", error);
       setUser(null);
-      return null;
+      throw error; // Re-throw error for the UI component to display
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const logout = async () => {
     try {
-      await api.logout();
+      await api.logout(); // Invalidate the session on the server
     } catch (error) {
       console.error("Logout failed on server:", error);
     } finally {
-      setUser(null);
+      setUser(null); // Always clear the user from the frontend state
     }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
-      login, 
-      restoreSession,
-      logout,
-      checkSession 
-    }}>
-      {children}
+    <AuthContext.Provider value={{ user, isLoading, login, logout, restoreSession }}>
+      {/* This is the key to a smooth UX: we don't render any part of the app 
+          until the initial session check is complete. */}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
 
 /**
- * Custom hook to easily access the AuthContext.
+ * Custom hook to easily access the AuthContext from any component.
+ * NOTE: Exporting this from the same file may trigger a Fast Refresh warning in Vite.
+ * For the best development experience, this could be moved to its own file.
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
@@ -108,3 +111,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
