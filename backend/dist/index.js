@@ -65,6 +65,7 @@ const socket_1 = require("./socket"); // Updated import
 const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
     const app = (0, express_1.default)();
     const httpServer = http_1.default.createServer(app);
+    app.set('trust proxy', 1);
     // --- Core Middleware Setup ---
     app.use((0, cors_1.default)({
         origin: config_1.CORS_ORIGIN,

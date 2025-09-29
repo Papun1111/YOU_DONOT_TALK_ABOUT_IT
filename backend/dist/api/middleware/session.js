@@ -20,8 +20,14 @@ exports.sessionMiddleware = (0, express_session_1.default)({
     }),
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-        sameSite: 'lax',
+        httpOnly: true, // Prevents client-side JS from accessing the cookie
+        // --- PRODUCTION FIXES ---
+        // 1. `secure: true` tells the browser to ONLY send the cookie over HTTPS.
+        //    This is CRITICAL for production. Your backend MUST be served over HTTPS for this to work.
+        secure: process.env.NODE_ENV === 'production',
+        // 2. `sameSite: 'none'` is required for cross-domain cookies (when your frontend and backend
+        //    are on different domains). This MUST be used with `secure: true`.
+        //    For local development (`http`), we keep it as 'lax'.
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     },
 });
