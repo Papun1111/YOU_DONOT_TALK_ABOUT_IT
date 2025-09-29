@@ -25,7 +25,7 @@ const startServer = async () => {
     app.set('trust proxy', 1); 
     // --- Core Middleware Setup ---
     app.use(cors({
-        origin: "*",
+        origin: CORS_ORIGIN,
         credentials: true,
     }));
     app.use(express.json()); // To parse JSON bodies
