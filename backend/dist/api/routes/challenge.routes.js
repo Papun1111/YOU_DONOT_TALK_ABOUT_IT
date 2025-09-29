@@ -33,15 +33,20 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * @fileoverview Routes for challenge-related actions, like submissions.
- */
 const express_1 = require("express");
 const ChallengeController = __importStar(require("../controllers/challenge.controller"));
-// FIX: The non-existent 'submissionLimiter' has been replaced with 'strictLimiter'.
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
-// Route for a user to submit an answer to a challenge
-// POST /api/challenges/:challengeId/submit
+/**
+ * @route   POST /api/challenges
+ * @desc    Create a new challenge (for room owners)
+ * @access  Private (requires session, ownership checked in controller)
+ */
+router.post('/', rateLimiter_1.strictLimiter, ChallengeController.createChallenge);
+/**
+ * @route   POST /api/challenges/:challengeId/submit
+ * @desc    Submit an answer to a challenge
+ * @access  Private (requires session)
+ */
 router.post('/:challengeId/submit', rateLimiter_1.strictLimiter, ChallengeController.submitAnswer);
 exports.default = router;

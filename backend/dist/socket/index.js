@@ -32,21 +32,30 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getIO = exports.initSocketServer = void 0;
 /**
- * @fileoverview Main setup for the Socket.IO server, including authentication and namespaces.
+ * @fileoverview Main setup for the Socket.IO server, including authentication and all real-time namespaces.
  */
 const socket_io_1 = require("socket.io");
 const Logger = __importStar(require("../utils/logger"));
 const config_1 = require("../config");
-const session_1 = require("../api/middleware/session"); // This will be created in the middleware step
+const session_1 = require("../api/middleware/session");
+const ScoringService = __importStar(require("../services/scoring.service")); // For awarding points
 // A global variable to hold the io instance so it can be accessed from other parts of the app.
 let io;
 /**
  * Initializes the Socket.IO server and attaches it to the HTTP server.
  * @param {http.Server} httpServer - The main HTTP server instance from Express.
- * @returns {Server} The configured Socket.IO server instance.
  */
 const initSocketServer = (httpServer) => {
     io = new socket_io_1.Server(httpServer, {
@@ -56,14 +65,11 @@ const initSocketServer = (httpServer) => {
         },
     });
     // --- Middleware for Authentication ---
-    // This allows Socket.IO to use the same session middleware as Express.
     const wrap = (middleware) => (socket, next) => middleware(socket.request, {}, next);
     io.use(wrap(session_1.sessionMiddleware));
-    // This second middleware checks for a valid userId in the session after the session is parsed.
     io.use((socket, next) => {
         var _a;
         if ((_a = socket.request.session) === null || _a === void 0 ? void 0 : _a.userId) {
-            // Attach the userId to the socket object for easy access in event handlers.
             socket.data.userId = socket.request.session.userId;
             next();
         }
@@ -72,21 +78,63 @@ const initSocketServer = (httpServer) => {
             next(new Error('Authentication error: Unauthorized.'));
         }
     });
-    // --- Namespace for the Live Feed ---
+    // --- Existing Namespace: Live Feed (Unaffected) ---
     const feedNamespace = io.of('/feed');
     feedNamespace.on('connection', (socket) => {
         Logger.info(`User ${socket.data.userId} connected to the feed`, 'SocketFeed');
-        // Here you could have users join specific rooms, e.g., socket.join('room:the-basement');
         socket.on('disconnect', () => {
             Logger.info(`User ${socket.data.userId} disconnected from the feed`, 'SocketFeed');
         });
     });
-    // --- Namespace for the Leaderboard ---
+    // --- Existing Namespace: Leaderboard (Unaffected) ---
     const leaderboardNamespace = io.of('/leaderboard');
     leaderboardNamespace.on('connection', (socket) => {
         Logger.info(`User ${socket.data.userId} connected to the leaderboard`, 'SocketLeaderboard');
         socket.on('disconnect', () => {
             Logger.info(`User ${socket.data.userId} disconnected from the leaderboard`, 'SocketLeaderboard');
+        });
+    });
+    // --- NEW Namespace: Live Challenge Interaction ---
+    const challengeNamespace = io.of('/challenge');
+    challengeNamespace.on('connection', (socket) => {
+        Logger.info(`User ${socket.data.userId} connected to challenges`, 'SocketChallenge');
+        // Event for any user (Master or Challenger) to join a specific room's socket channel
+        socket.on('room:join', (roomId) => {
+            socket.join(roomId);
+            Logger.info(`User ${socket.data.userId} (Socket ID: ${socket.id}) joined room channel: ${roomId}`, 'SocketChallenge');
+        });
+        // --- Challenger Events ---
+        socket.on('challenger:ready_for_dare', ({ roomId, user }) => {
+            // Notify everyone in the room (specifically the Room Master) that a challenger is ready.
+            socket.to(roomId).emit('master:challenger_is_ready', { user, challengerSocketId: socket.id });
+        });
+        socket.on('challenger:submit_dare', ({ roomId, responseText, user }) => {
+            // Send the challenger's response back to the Room Master for review.
+            socket.to(roomId).emit('master:receive_dare_response', { user, responseText });
+        });
+        // --- Room Master Events ---
+        socket.on('master:send_dare', ({ roomId, dareText, challengerSocketId }) => {
+            // Send the custom dare from the master specifically to the waiting challenger.
+            io.to(challengerSocketId).emit('challenger:receive_dare', { dareText });
+        });
+        socket.on('master:grant_points', (_a) => __awaiter(void 0, [_a], void 0, function* ({ roomId, score, challengerUserId, challengeId }) {
+            try {
+                // Backend logic to create a formal submission and award points
+                yield ScoringService.awardDarePoints(challengerUserId, challengeId, score);
+                // Notify everyone in the room (including the challenger) of the success.
+                io.to(roomId).emit('room:dare_success', {
+                    message: `Welcome to the group. ${score} points awarded to user ${challengerUserId}.`,
+                    challengerUserId
+                });
+                Logger.info(`Points granted to ${challengerUserId} in room ${roomId}`, 'SocketChallenge');
+            }
+            catch (error) {
+                Logger.error('Failed to grant points via socket event.', error, 'SocketChallenge');
+                // Optionally, emit an error event back to the Room Master's client
+            }
+        }));
+        socket.on('disconnect', () => {
+            Logger.info(`User ${socket.data.userId} disconnected from challenges`, 'SocketChallenge');
         });
     });
     Logger.info('Socket.IO server initialized with authentication.', 'SocketIO');
@@ -95,9 +143,6 @@ const initSocketServer = (httpServer) => {
 exports.initSocketServer = initSocketServer;
 /**
  * A getter function to access the initialized Socket.IO server instance from anywhere in the app.
- * This is crucial for emitting events from controllers and services.
- * @returns {Server} The Socket.IO server instance.
- * @throws {Error} If the socket server has not been initialized yet.
  */
 const getIO = () => {
     if (!io) {

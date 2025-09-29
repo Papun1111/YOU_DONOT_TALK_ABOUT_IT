@@ -42,89 +42,94 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitAnswer = void 0;
+exports.submitAnswer = exports.createChallenge = void 0;
 const Challenge_model_1 = require("../models/Challenge.model");
 const Submission_model_1 = require("../models/Submission.model");
+const Room_model_1 = require("../models/Room.model"); // Import the Room model for the ownership check
 const ScoringService = __importStar(require("../../services/scoring.service"));
 const ApiResponse = __importStar(require("../../utils/apiResponse"));
 /**
- * Submits an answer for a specific challenge, ensuring the user is authenticated.
+ * Creates a new challenge for a specific room.
+ * Only the owner of the room is permitted to perform this action.
+ */
+const createChallenge = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // @ts-ignore - Get the authenticated user's ID from the session
+        const userId = req.session.userId;
+        if (!userId) {
+            return ApiResponse.error(res, 401, 'Authentication required.');
+        }
+        const { roomId, type, title, prompt, options, correctIndex, difficulty } = req.body;
+        // 1. Find the room the challenge will be added to.
+        const room = yield Room_model_1.Room.findById(roomId);
+        if (!room) {
+            return ApiResponse.error(res, 404, 'Room not found.');
+        }
+        // 2. Security Check: Verify that the current user is the owner of the room.
+        if (room.ownerId.toString() !== userId) {
+            return ApiResponse.error(res, 403, 'Forbidden: You are not the owner of this room.');
+        }
+        // 3. Create the new challenge document.
+        const newChallenge = new Challenge_model_1.Challenge({
+            roomId,
+            type,
+            title,
+            prompt,
+            options,
+            correctIndex,
+            difficulty,
+            active: true // New challenges are active by default
+        });
+        // 4. Save to the database.
+        yield newChallenge.save();
+        return ApiResponse.success(res, 201, 'Challenge created successfully.', newChallenge);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+exports.createChallenge = createChallenge;
+/**
+ * Submits an answer for a specific challenge.
  */
 const submitAnswer = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
     try {
-        // --- AUTHENTICATION CHECK ---
         // @ts-ignore
-        const userId = (_a = req.session) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.session.userId;
         if (!userId) {
-            return ApiResponse.error(res, 401, 'You must be logged in to submit a challenge.');
+            return ApiResponse.error(res, 401, 'You must be logged in to submit an answer.');
         }
         const { challengeId } = req.params;
         const { content, timeMs } = req.body;
-        // Validate required fields
-        if (!challengeId) {
-            return ApiResponse.error(res, 400, 'Challenge ID is required.');
-        }
-        if (!content && content !== 0) { // Allow 0 as valid content for option index
-            return ApiResponse.error(res, 400, 'Answer content is required.');
-        }
         const challenge = yield Challenge_model_1.Challenge.findById(challengeId);
         if (!challenge) {
             return ApiResponse.error(res, 404, 'Challenge not found.');
         }
         let scoreResult;
-        // Calculate score based on the type of challenge
         if (challenge.type === 'puzzle') {
-            // Validate timeMs for puzzles
-            if (typeof timeMs !== 'number' || timeMs < 0) {
-                return ApiResponse.error(res, 400, 'Valid time in milliseconds is required for puzzles.');
-            }
             const selectedOptionIndex = parseInt(content, 10);
-            // Validate the selected option index
-            if (isNaN(selectedOptionIndex) || selectedOptionIndex < 0 || selectedOptionIndex >= (((_b = challenge.options) === null || _b === void 0 ? void 0 : _b.length) || 0)) {
-                return ApiResponse.error(res, 400, 'Invalid option selected.');
-            }
             const isCorrect = selectedOptionIndex === challenge.correctIndex;
-            try {
-                // @ts-ignore
-                scoreResult = ScoringService.calculatePuzzleScore(challenge.difficulty, timeMs, isCorrect);
-            }
-            catch (scoringError) {
-                console.error('Scoring service error:', scoringError);
-                return ApiResponse.error(res, 500, 'Error calculating score.');
-            }
+            //@ts-ignore
+            scoreResult = ScoringService.calculatePuzzleScore(challenge.difficulty, timeMs, isCorrect);
         }
-        else if (challenge.type === 'dare') {
-            // Validate content for dares (should be text)
-            if (typeof content !== 'string' || content.trim().length === 0) {
-                return ApiResponse.error(res, 400, 'Dare response cannot be empty.');
-            }
-            // On initial submission, a dare has a score of 0.
-            // Points are awarded later via upvotes on the feed.
-            scoreResult = { scoreDelta: 0, isCorrect: undefined };
+        else { // 'dare' type
+            // Dare score is initially 0, points are added later via upvotes.
+            scoreResult = ScoringService.calculateDareScore(0);
         }
-        else {
-            return ApiResponse.error(res, 400, 'Invalid challenge type.');
-        }
-        // Create the submission document
-        const submissionData = {
+        const newSubmission = new Submission_model_1.Submission({
             userId,
             challengeId,
+            content,
+            timeMs,
             //@ts-ignore
-            content: challenge.type === 'puzzle' ? selectedOptionIndex : content,
+            isCorrect: scoreResult.isCorrect,
+            //@ts-ignore
             scoreDelta: scoreResult.scoreDelta,
-        };
-        // Only include timeMs for puzzles
-        if (challenge.type === 'puzzle') {
-            submissionData.timeMs = timeMs;
-            submissionData.isCorrect = scoreResult.isCorrect;
-        }
-        const newSubmission = new Submission_model_1.Submission(submissionData);
+        });
         yield newSubmission.save();
         return ApiResponse.success(res, 201, 'Submission successful.', newSubmission);
     }
     catch (error) {
-        console.error('Submit answer error:', error);
         next(error);
     }
 });

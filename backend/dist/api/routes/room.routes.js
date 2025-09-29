@@ -46,7 +46,10 @@ router.get('/', rateLimiter_1.generalLimiter, RoomController.getAllRooms);
 // Route to create a new room
 // POST /api/rooms
 router.post('/', rateLimiter_1.strictLimiter, RoomController.createRoom);
+// Route to get a single room's details by its unique key
+// GET /api/rooms/:roomKey
+router.get('/:roomKey', rateLimiter_1.generalLimiter, RoomController.getRoomByKey);
 // Route to get all active challenges within a specific room
-// GET /api/rooms/:roomId/challenges
-router.get('/:roomId/challenges', rateLimiter_1.generalLimiter, RoomController.getRoomChallenges);
+// GET /api/rooms/:roomKey/challenges
+router.get('/:roomKey/challenges', rateLimiter_1.generalLimiter, RoomController.getRoomChallenges);
 exports.default = router;
