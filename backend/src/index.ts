@@ -25,7 +25,7 @@ const startServer = async () => {
     app.set('trust proxy', 1); 
     // --- Core Middleware Setup ---
     app.use(cors({
-        origin: CORS_ORIGIN,
+        origin: "https://fight-club-online.vercel.app/",
         credentials: true,
     }));
     app.use(express.json()); // To parse JSON bodies
