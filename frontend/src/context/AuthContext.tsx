@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const currentUser = await api.checkSession();
       setUser(currentUser);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Don't log error for expected 401s on landing page
       setUser(null);
@@ -99,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 /**
  * Custom hook to easily access the AuthContext.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

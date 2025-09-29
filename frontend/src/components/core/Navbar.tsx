@@ -20,7 +20,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="bg-gray-900 bg-opacity-80 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-700/50">
+    <header className="bg-transparent backdrop-blur-sm sticky top-0 z-50 border-b border-gray-700/50">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex-shrink-0">
