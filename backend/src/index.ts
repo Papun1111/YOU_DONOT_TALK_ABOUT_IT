@@ -22,7 +22,7 @@ import { initSocketServer } from './socket'; // Updated import
 const startServer = async () => {
     const app = express();
     const httpServer = http.createServer(app);
-
+    app.set('trust proxy', 1); 
     // --- Core Middleware Setup ---
     app.use(cors({
         origin: CORS_ORIGIN,
