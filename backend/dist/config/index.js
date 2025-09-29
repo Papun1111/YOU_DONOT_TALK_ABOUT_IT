@@ -62,7 +62,7 @@ const getEnvVar = (name, defaultValue) => {
     return value;
 };
 // --- Exported Configuration Constants ---
-exports.NODE_ENV = getEnvVar('NODE_ENV', 'development');
+exports.NODE_ENV = getEnvVar('NODE_ENV', 'production');
 exports.PORT = parseInt(getEnvVar('PORT', '4000'), 10);
 exports.MONGO_URI = getEnvVar('MONGO_URI');
 exports.SESSION_SECRET = getEnvVar('SESSION_SECRET');

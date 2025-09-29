@@ -59,6 +59,7 @@ const Logger = __importStar(require("../utils/logger"));
 const connectDB = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Mongoose connection options
+        console.log(index_1.MONGO_URI);
         yield mongoose_1.default.connect(index_1.MONGO_URI);
         Logger.info('MongoDB connected successfully.', 'Database');
     }

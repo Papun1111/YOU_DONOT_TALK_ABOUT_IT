@@ -27,7 +27,7 @@ const getEnvVar = (name: string, defaultValue?: string): string => {
 
 // --- Exported Configuration Constants ---
 
-export const NODE_ENV = getEnvVar('NODE_ENV', 'development');
+export const NODE_ENV = getEnvVar('NODE_ENV', 'production');
 export const PORT = parseInt(getEnvVar('PORT', '4000'), 10);
 export const MONGO_URI = getEnvVar('MONGO_URI');
 export const SESSION_SECRET = getEnvVar('SESSION_SECRET');
