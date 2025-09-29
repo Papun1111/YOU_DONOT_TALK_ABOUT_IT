@@ -4,10 +4,20 @@ import { type Room, type ApiResponse } from '../types';
 /**
  * Fetches the list of all available rooms.
  */
-export const getRooms = async (): Promise<Room[]> => {
+export const getAllRooms = async (): Promise<Room[]> => {
     const response = await apiClient.get<ApiResponse<Room[]>>('/rooms');
     return response.data.data;
 };
+
+/**
+ * Fetches a single room by its unique key.
+ * This corresponds to the GET /api/rooms/:roomKey endpoint.
+ */
+export const getRoomByKey = async (roomKey: string): Promise<Room> => {
+    const response = await apiClient.get<ApiResponse<Room>>(`/rooms/${roomKey}`);
+    return response.data.data;
+};
+
 
 /**
  * Creates a new room.

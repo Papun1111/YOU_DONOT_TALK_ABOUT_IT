@@ -20,12 +20,14 @@ const LandingPage = () => {
   return (
     <div className="flex flex-col items-center justify-center text-center min-h-[calc(100vh-8rem)]">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <GlitchHeading text="The first rule of Digital Fight Club:" as="h1" className="text-3xl md:text-5xl" />
+        
+        <
+          GlitchHeading text="The first rule of Digital Fight Club:" as="h1" className="text-3xl md:text-5xl " />
         <p className="mt-2 text-xl md:text-3xl text-gray-400">You don’t talk about it.</p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }} className="mt-8">
-        <GlitchHeading text="The second rule:" as="h2" className="text-2xl md:text-4xl" />
+        <GlitchHeading text="The second rule:" as="h2" className="text-2xl md:text-4xl " />
         <p className="mt-2 text-lg md:text-2xl text-gray-400">You don’t log in with your real name.</p>
       </motion.div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type Post, type Room } from '../types';
 import { getFeed } from '../api/posts';
-import { getRooms } from '../api/room';
+import { getAllRooms } from '../api/room';
 import { useSocket } from '../hooks/useSocket';
 import Spinner from '../components/ui/Spinner';
 import GlitchHeading from '../components/ui/GlitchHeading';
@@ -33,7 +33,7 @@ const FeedPage = () => {
         setPosts(Array.isArray(postData) ? postData : []);
 
         // Fetch the list of rooms for the dropdown selector
-        const roomData = await getRooms();
+        const roomData = await getAllRooms();
         // Also apply the same safeguard for rooms data.
         setRooms(Array.isArray(roomData) ? roomData : []);
 

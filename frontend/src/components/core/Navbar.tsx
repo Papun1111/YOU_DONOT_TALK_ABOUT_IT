@@ -3,11 +3,12 @@ import { useAuth } from '../../context/AuthContext';
 import { LogOut } from 'lucide-react';
 // A glitch text component will be created later in ui/
 // For now, we'll just style it.
-import GlitchHeading from '../ui/GlitchHeading';
+
+import FuzzyText from '../ui/FuzzyText';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-
+  
   // Updated linkClass function to use template literals instead of the 'cn' utility.
   // Tailwind v4 handles merging these classes automatically.
   const linkClass = ({ isActive }: { isActive: boolean }) => {
@@ -24,7 +25,13 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex-shrink-0">
             <NavLink to="/" className="text-white">
-              <GlitchHeading text="DFClub" as="div" className="text-2xl" />
+               <FuzzyText  baseIntensity={0.1} 
+  hoverIntensity={0.5} 
+  enableHover={true}
+  fontSize={"clamp(1rem, 1.5vw, 1rem)"}
+  color='red'>
+Fight Club
+        </FuzzyText>
             </NavLink>
           </div>
           <div className="hidden md:block">

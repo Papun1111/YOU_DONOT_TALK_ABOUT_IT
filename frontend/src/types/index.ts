@@ -50,6 +50,7 @@ export type Room = {
   key: string; // e.g., 'the-basement'
   name: string;
   description: string;
+  ownerId: string; // The ID of the user who created and owns the room
   rules: string[];
   weights: {
     puzzle: number;
@@ -158,3 +159,4 @@ export type Leaderboard = {
   scope: "global" | "room";
   items: LeaderboardItem[];
 };
+

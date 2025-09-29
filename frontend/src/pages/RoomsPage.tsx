@@ -1,6 +1,6 @@
 import { useState, useEffect,type FormEvent } from 'react';
 import { type Room } from '../types';
-import { getRooms,createRoom } from '../api/room';
+import { getAllRooms,createRoom } from '../api/room';
 import GlitchHeading from '../components/ui/GlitchHeading';
 import Spinner from '../components/ui/Spinner';
 import RoomCard from '../components/rooms/RoomCard';
@@ -31,7 +31,7 @@ const RoomsPage = () => {
   const fetchRooms = async () => {
     setIsLoading(true);
     try {
-      const data = await getRooms();
+      const data = await getAllRooms();
       setRooms(data);
     } catch (apiError) {
       setError(apiError instanceof Error ? apiError.message : 'Could not load rooms.');

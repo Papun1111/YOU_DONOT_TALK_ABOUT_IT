@@ -41,7 +41,7 @@ const GlitchHeading = ({
         className="inline-block relative"
       >
         {/* The original text */}
-        <span className="relative z-10">{text}</span>
+        <span className="relative z-10 bg-gradient-to-r from-slate-100 via-red-700 to-red-400 bg-clip-text text-transparent">{text}</span>
         {/* The glitch layers */}
         {!reduceMotion && (
           <>
