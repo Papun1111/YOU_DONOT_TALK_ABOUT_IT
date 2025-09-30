@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { LogOut } from 'lucide-react';
 // A glitch text component will be created later in ui/
 // For now, we'll just style it.

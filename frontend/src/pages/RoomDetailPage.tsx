@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { type Room, type Challenge, type Submission, type PuzzleChallenge, type DareChallenge } from '../types';
 import { getChallengesForRoom, createChallenge } from '../api/challenges';
 import { getRoomByKey } from '../api/room'; // Corrected import path

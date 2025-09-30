@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext, type ReactNode } from 'react';
+import {  useState, useEffect, type ReactNode } from 'react';
 import { type User } from '../types';
 import * as api from '../api/auth';
 
@@ -6,7 +6,7 @@ import * as api from '../api/auth';
  * This interface defines the shape of the authentication context's value.
  * It's what components will receive when they use the `useAuth` hook.
  */
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   isLoading: boolean; // Indicates if the initial session check is running
   login: (secretPhrase?: string) => Promise<User | null>;
@@ -14,7 +14,7 @@ interface AuthContextType {
   restoreSession: (publicName: string, secretPhrase: string) => Promise<User | null>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './AuthContextProvider';
 
 /**
  * This component provides the authentication state and functions to the entire app.
@@ -91,8 +91,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, restoreSession }}>
-      {/* This is the key to a smooth UX: we don't render any part of the app 
-          until the initial session check is complete. */}
       {!isLoading && children}
     </AuthContext.Provider>
   );
@@ -103,12 +101,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
  * NOTE: Exporting this from the same file may trigger a Fast Refresh warning in Vite.
  * For the best development experience, this could be moved to its own file.
  */
-// eslint-disable-next-line react-refresh/only-export-components
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
