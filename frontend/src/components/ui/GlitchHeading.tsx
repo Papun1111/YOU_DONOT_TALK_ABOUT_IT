@@ -41,18 +41,18 @@ const GlitchHeading = ({
         className="inline-block relative"
       >
         {/* The original text */}
-        <span className="relative z-10 bg-gradient-to-r from-slate-100 via-red-700 to-red-400 bg-clip-text text-transparent">{text}</span>
+        <span className="rock-salt-regular relative z-10 bg-gradient-to-r from-slate-100 via-red-700 to-red-400 bg-clip-text text-transparent">{text}</span>
         {/* The glitch layers */}
         {!reduceMotion && (
           <>
             <span
-              className="absolute top-0 left-0 w-full h-full text-red-500 opacity-80"
+              className="rock-salt-regular absolute top-0 left-0 w-full h-full text-red-500 opacity-80"
               style={{ clipPath: 'inset(25% 0 50% 0)' }}
             >
               {text}
             </span>
-            <span
-              className="absolute top-0 left-0 w-full h-full text-cyan-400 opacity-80"
+            <span 
+              className="rock-salt-regular absolute top-0 left-0 w-full h-full text-cyan-400 opacity-80"
               style={{ clipPath: 'inset(50% 0 25% 0)' }}
             >
               {text}
